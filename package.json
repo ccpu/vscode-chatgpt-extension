@@ -1,15 +1,14 @@
 {
-  "name": "chatgpt-plus",
-  "publisher": "molab",
+  "name": "vscode-chatgpt-plus",
   "displayName": "ChatGPT PLUS",
   "icon": "images/ai-logo.jpg",
   "description": "Enhance your coding skills and efficiency by leveraging ChatGPT AI with ease.",
-  "version": "2.0.0",
+  "version": "2.1.0",
   "repository": {
     "url": "https://github.com/ccpu/vscode-chatgpt-plus.git"
   },
   "engines": {
-    "vscode": "^1.73.0"
+    "vscode": "^1.96.0"
   },
   "categories": [
     "Testing",
@@ -297,5 +296,8 @@
   "dependencies": {
     "axios": "^1.7.9",
     "highlight.js": "^11.11.1"
+  },
+  "__metadata": {
+    "size": 124781238
   }
 }
