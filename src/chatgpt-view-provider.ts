@@ -1,4 +1,3 @@
-import { Configuration, OpenAIApi } from 'openai-fork';
 import * as vscode from 'vscode';
 import { getConfigs } from './config';
 import {
@@ -7,6 +6,7 @@ import {
   isResponseWithCode,
   trimNewLine,
 } from './utils';
+import { AIChat } from './AIChat';
 
 interface RequestData {
   value: string;
@@ -18,7 +18,7 @@ interface RequestData {
 
 export default class ChatGptViewProvider implements vscode.WebviewViewProvider {
   private webView?: vscode.WebviewView;
-  private openai?: OpenAIApi;
+  private aiChat?: AIChat;
 
   /**
    * Message to be rendered lazily if they haven't been rendered
@@ -81,7 +81,8 @@ export default class ChatGptViewProvider implements vscode.WebviewViewProvider {
   }
 
   private prepareConversation(reset?: boolean): boolean {
-    const apiKey = getConfigs().apiKey;
+    const { apiKey, apiUrl, maxTokens, model } = getConfigs();
+
     if (!apiKey) {
       vscode.window.showErrorMessage(
         'Make sure to add the ChatGPT API key in your vscode settings, as it has not been provided.'
@@ -89,14 +90,14 @@ export default class ChatGptViewProvider implements vscode.WebviewViewProvider {
       return false;
     }
 
-    if (reset || !this.openai || this.apiKey !== apiKey) {
+    if (reset || !this.aiChat || this.apiKey !== apiKey) {
       this.apiKey = apiKey;
       try {
-        const configuration = new Configuration({
-          apiKey: getConfigs().apiKey,
+        this.aiChat = new AIChat({
+          apiKey: apiKey,
+          apiUrl: apiUrl,
+          defaultModel: model,
         });
-
-        this.openai = new OpenAIApi(configuration);
       } catch (error: any) {
         vscode.window.showErrorMessage(
           'Failed to instantiate the Openai API.',
@@ -112,14 +113,14 @@ export default class ChatGptViewProvider implements vscode.WebviewViewProvider {
 
   public async sendApiRequest(data: RequestData) {
     const { value, command, prompt } = data;
+    const { apiKey, apiUrl, maxTokens, model } = getConfigs();
 
     this.prepareConversation();
 
-    if (!this.openai) {
+    if (!this.aiChat) {
       return;
     }
 
-    let response: string;
     let question = value;
 
     if (prompt) {
@@ -143,29 +144,15 @@ export default class ChatGptViewProvider implements vscode.WebviewViewProvider {
       command,
     });
 
-    try {
-      const conf = getConfigs();
-      const completion = await this.openai.createCompletion({
-        model: conf.model,
-        prompt: question,
-        max_tokens: conf.maxTokens,
-      });
-
-      response = trimNewLine(
-        completion.data.choices[0] ? completion.data.choices[0].text || '' : ''
-      );
-    } catch (error: any) {
-      vscode.window.showErrorMessage('An error occurred.', error?.message);
-      this.sendMessage({ type: 'addError' });
-      return;
-    }
-
-    const language = getLanguage(response);
+    const response = await this.aiChat.sendMessage(question, {
+      model,
+      maxTokens,
+    });
 
     this.sendMessage({
       type: 'addResponse',
       value: response,
-      language,
+      language: 'an',
       prompt,
       command,
       isCode: isResponseWithCode(command || ''),

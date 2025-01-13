@@ -11,6 +11,7 @@ export const getConfigs = () => {
     apiKey,
     maxTokens: getConfig('maxTokens') as unknown as number,
     model: getConfig('model')!,
+    apiUrl: getConfig('apiUrl')!,
   };
 };
 
