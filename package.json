@@ -270,22 +270,27 @@
     }
   },
   "scripts": {
-    "vscode:prepublish": "npm run esbuild-base -- --minify",
-    "esbuild-base": "rimraf out && esbuild ./src/extension.ts --bundle --outfile=out/extension.js --external:vscode --format=cjs --platform=node",
-    "build": "npm run -S esbuild-base -- --sourcemap",
-    "watch": "npm run -S esbuild-base -- --sourcemap --watch",
-    "fmt": "prettier --write \"src/**/*.ts\"&& npm run test -- --fix",
-    "test": "eslint src --ext ts && tsc --noEmit"
+    "vscode:prepublish": "npm run build-all -- --minify",
+    "build-all": "npm run build-extension && npm run build-media",
+    "build-extension": "rimraf out && esbuild ./src/extension.ts --bundle --outfile=out/extension.js --external:vscode --format=cjs --platform=node",
+    "build-media": "esbuild ./src/chat-view/main.ts --bundle --outfile=out/main.js --format=iife",
+    "watch": "concurrently \"npm run watch-extension\" \"npm run watch-media\"",
+    "watch-extension": "npm run build-extension -- --sourcemap --watch",
+    "watch-media": "npm run build-media -- --sourcemap --watch",
+    "fmt": "prettier --write \"src/**/*.ts\" \"media/src/**/*.ts\" && npm run test -- --fix",
+    "test": "eslint src media/src --ext ts && tsc --noEmit"
   },
   "devDependencies": {
     "@types/glob": "^8.0.0",
     "@types/mocha": "^10.0.1",
     "@types/node": "16.x",
+    "@types/turndown": "^5.0.5",
     "@types/vscode": "^1.73.0",
     "@types/vscode-webview": "^1.57.0",
     "@typescript-eslint/eslint-plugin": "^5.45.0",
     "@typescript-eslint/parser": "^5.45.0",
     "@vscode/test-electron": "^2.2.0",
+    "concurrently": "^8.0.0",
     "esbuild": "^0.15.18",
     "eslint": "^8.28.0",
     "glob": "^8.0.3",
@@ -295,7 +300,9 @@
   },
   "dependencies": {
     "axios": "^1.7.9",
-    "highlight.js": "^11.11.1"
+    "highlight.js": "^11.11.1",
+    "marked": "^15.0.6",
+    "turndown": "^7.2.0"
   },
   "__metadata": {
     "size": 124781238

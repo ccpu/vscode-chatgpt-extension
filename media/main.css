@@ -222,3 +222,43 @@ button.resend-element-gnc {
   border-radius: 50%;
   padding: 0.4rem;
 }
+/* Add these new styles */
+pre {
+  margin-top: 0;
+  white-space: pre-wrap;
+  word-wrap: break-word;
+  max-width: 100%;
+}
+
+code {
+  color: inherit;
+  white-space: pre-wrap !important;
+  word-wrap: break-word !important;
+  display: block;
+  max-width: 100%;
+}
+
+.pre-code-element {
+  position: relative;
+  width: 100%;
+}
+
+/* Modify the existing text-wrapper and text-content classes */
+.text-wrapper {
+  position: relative;
+  width: 100%;
+}
+
+.text-content {
+  white-space: pre-wrap !important;
+  position: relative;
+  word-wrap: break-word;
+  overflow-wrap: break-word;
+  width: 100%;
+}
+
+/* Add this for any code blocks within hljs (syntax highlighting) */
+.hljs {
+  white-space: pre-wrap !important;
+  word-wrap: break-word !important;
+}

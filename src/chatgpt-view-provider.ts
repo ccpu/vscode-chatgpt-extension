@@ -111,6 +111,7 @@ export default class ChatGptViewProvider implements vscode.WebviewViewProvider {
     return true;
   }
 
+  // chatgpt-view-provider.ts
   public async sendApiRequest(data: RequestData) {
     const { value, command, prompt } = data;
     const { apiKey, apiUrl, maxTokens, model } = getConfigs();
@@ -124,11 +125,9 @@ export default class ChatGptViewProvider implements vscode.WebviewViewProvider {
     let question = value;
 
     if (prompt) {
-      // Add prompt prefix to the code if there was a code block selected
       question = `${prompt}:\n\n ${value}`;
     }
 
-    // If the ChatGPT view is not in focus/visible; focus on it to render Q&A
     if (!this.webView) {
       await vscode.commands.executeCommand('chatgptplus.view.focus');
     } else {
@@ -144,19 +143,32 @@ export default class ChatGptViewProvider implements vscode.WebviewViewProvider {
       command,
     });
 
-    const response = await this.aiChat.sendMessage(question, {
-      model,
-      maxTokens,
-    });
-
+    // Add initial empty response
     this.sendMessage({
       type: 'addResponse',
-      value: response,
-      language: 'an',
-      prompt,
-      command,
+      value: '',
+      language: 'markdown',
       isCode: isResponseWithCode(command || ''),
     });
+
+    let responseText = '';
+
+    await this.aiChat.sendStreamingMessage(
+      question,
+      (chunk) => {
+        responseText += chunk;
+        this.sendMessage({
+          type: 'updateResponse',
+          value: responseText,
+          language: 'markdown',
+          isCode: isResponseWithCode(command || ''),
+        });
+      },
+      {
+        model,
+        maxTokens,
+      }
+    );
   }
 
   /**
@@ -174,7 +186,7 @@ export default class ChatGptViewProvider implements vscode.WebviewViewProvider {
 
   private getWebviewHtml(webview: vscode.Webview) {
     const scriptUri = webview.asWebviewUri(
-      vscode.Uri.joinPath(this.context.extensionUri, 'media', 'main.js')
+      vscode.Uri.joinPath(this.context.extensionUri, 'out', 'main.js')
     );
     const stylesMainUri = webview.asWebviewUri(
       vscode.Uri.joinPath(this.context.extensionUri, 'media', 'main.css')
@@ -188,14 +200,7 @@ export default class ChatGptViewProvider implements vscode.WebviewViewProvider {
         'highlight.min.css'
       )
     );
-    const vendorHighlightJs = webview.asWebviewUri(
-      vscode.Uri.joinPath(
-        this.context.extensionUri,
-        'media',
-        'vendor',
-        'highlight.min.js'
-      )
-    );
+
     const vendorMarkedJs = webview.asWebviewUri(
       vscode.Uri.joinPath(
         this.context.extensionUri,
@@ -212,14 +217,6 @@ export default class ChatGptViewProvider implements vscode.WebviewViewProvider {
         'tailwindcss.3.2.4.min.js'
       )
     );
-    const vendorTurndownJs = webview.asWebviewUri(
-      vscode.Uri.joinPath(
-        this.context.extensionUri,
-        'media',
-        'vendor',
-        'turndown.js'
-      )
-    );
 
     return `<!DOCTYPE html>
 			<html lang="en">
@@ -229,10 +226,10 @@ export default class ChatGptViewProvider implements vscode.WebviewViewProvider {
 
 				<link href="${stylesMainUri}" rel="stylesheet">
 				<link href="${vendorHighlightCss}" rel="stylesheet">
-				<script src="${vendorHighlightJs}"></script>
+
 				<script src="${vendorMarkedJs}"></script>
 				<script src="${vendorTailwindJs}"></script>
-				<script src="${vendorTurndownJs}"></script>
+
 			</head>
 			<body class="overflow-hidden">
 				<div class="flex flex-col h-screen">

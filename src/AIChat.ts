@@ -1,6 +1,7 @@
 // AIChat.ts
 import axios, { AxiosInstance, AxiosError } from 'axios';
 import { ProviderConfig, Message, ChatConfig } from './types';
+import { TextDecoder } from 'util';
 
 export class AIChat {
   private axios: AxiosInstance;
@@ -45,6 +46,68 @@ export class AIChat {
       this.conversationHistory.push(assistantMessage);
 
       return assistantMessage.content;
+    } catch (error) {
+      this.handleError(error);
+      throw error;
+    }
+  }
+
+  // AIChat.ts
+  // Add this new method
+  async sendStreamingMessage(
+    message: string,
+    onChunk: (chunk: string) => void,
+    config?: ChatConfig
+  ): Promise<void> {
+    try {
+      this.conversationHistory.push({
+        role: 'user',
+        content: message,
+      });
+
+      const response = await this.axios.post(
+        '',
+        {
+          model: config?.model || this.config.defaultModel,
+          messages: this.conversationHistory,
+          temperature: config?.temperature || 0.7,
+          max_tokens: config?.maxTokens || 150,
+          stream: true,
+        },
+        {
+          responseType: 'stream',
+        }
+      );
+
+      let fullResponse = '';
+
+      // Create decoder for parsing the chunks
+      const decoder = new TextDecoder();
+
+      for await (const chunk of response.data) {
+        const lines = decoder.decode(chunk).split('\n');
+
+        for (const line of lines) {
+          if (line.startsWith('data: ')) {
+            try {
+              const data = JSON.parse(line.slice(6));
+              if (data.choices[0].delta?.content) {
+                const content = data.choices[0].delta.content;
+                fullResponse += content;
+                onChunk(content);
+              }
+            } catch (e) {
+              // Skip invalid JSON
+              continue;
+            }
+          }
+        }
+      }
+
+      this.conversationHistory.push({
+        role: 'assistant',
+        content: fullResponse,
+      });
     } catch (error) {
       this.handleError(error);
       throw error;
